@@ -98,37 +98,11 @@ impl AStarPathFinder {
             }
         };
 
-        let mut open_set: Vec<usize> = vec![start_point.0];
-        let mut processed: Vec<usize> = Vec::new();
+        let open_set: Vec<usize> = vec![start_point.0];
 
         while !open_set.is_empty() {
-            let mut current_id = open_set[0];
-            let mut current_point = self.points[current_id];
 
-            for point_id in &open_set {
-                let point = self.points[*point_id];
-
-                let point_g = point.calculate_distance(&start_point.1);
-                let point_h = point.calculate_distance(&goal_point.1);
-                let point_f = point_g + point_h;
-
-                let current_g = current_point.calculate_distance(&start_point.1);
-                let current_h = current_point.calculate_distance(&goal_point.1);
-                let current_f = current_g + current_h;
-
-                if point_f <= current_f && point_h < current_h {
-                    current_id = *point_id;
-                    current_point = self.points[current_id];
-                }
-            }
-
-            processed.push(current_id);
-            open_set.remove(0);
-
-            for conn_id in self.get_connections(current_id) {
-                
-            }
-
+            break;
         }
 
         return vec![start_point.1];
