@@ -25,8 +25,26 @@ struct AStarConnection {
 
 #[derive(Debug, Clone, Default)]
 pub struct AStarPathFinder {
+    path_nodes: Vec<AStarPathNode>,
     points: Vec<AStarPoint>,
     connections: Vec<AStarConnection>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct AStarPathNode {
+    node_id: usize,
+
+    pub g_cost: f32,
+    pub h_cost: f32,
+    pub f_cost: f32,
+
+    pub came_from: Option<usize>,
+}
+
+impl AStarPathNode {
+    pub fn get_id(&self) -> usize {
+        self.node_id
+    }
 }
 
 impl AStarPathFinder {
@@ -98,7 +116,22 @@ impl AStarPathFinder {
             }
         };
 
-        let open_set: Vec<usize> = vec![start_point.0];
+        let mut open_set: Vec<AStarPathNode> = Vec::new();
+        let closed_set: Vec<AStarPathNode> = Vec::new();
+
+        self.path_nodes.clear();
+        for (id, point) in self.points.iter().enumerate() {
+            let g_cost = point.calculate_distance(&start_point.1);
+            let h_cost = point.calculate_distance(&goal_point.1);
+
+            let path_node = AStarPathNode { node_id: id, g_cost, h_cost, f_cost: g_cost+h_cost, came_from: None };
+
+            if id == start_point.0 {
+                open_set.push(path_node.clone());
+            }
+
+            self.path_nodes.push(path_node);
+        }
 
         while !open_set.is_empty() {
 
