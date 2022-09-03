@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, Copy)]
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AStarPoint {
     pub x: f32,
     pub y: f32,
@@ -25,26 +27,8 @@ struct AStarConnection {
 
 #[derive(Debug, Clone, Default)]
 pub struct AStarPathFinder {
-    path_nodes: Vec<AStarPathNode>,
     points: Vec<AStarPoint>,
     connections: Vec<AStarConnection>,
-}
-
-#[derive(Debug, Clone, Default)]
-struct AStarPathNode {
-    node_id: usize,
-
-    pub g_cost: f32,
-    pub h_cost: f32,
-    pub f_cost: f32,
-
-    pub came_from: Option<usize>,
-}
-
-impl AStarPathNode {
-    pub fn get_id(&self) -> usize {
-        self.node_id
-    }
 }
 
 impl AStarPathFinder {
@@ -81,7 +65,7 @@ impl AStarPathFinder {
         connections
     }
 
-    fn get_closest_point(&self, current_point: AStarPoint) -> Option<(usize, AStarPoint)> {
+    pub fn get_closest_point(&self, current_point: AStarPoint) -> Option<(usize, AStarPoint)> {
         let mut closest_point: Option<(usize, AStarPoint)> = None;
         let mut closest_distance: f32 = f32::MAX;
 
@@ -101,48 +85,105 @@ impl AStarPathFinder {
         }
     }
 
-    pub fn solve_path(&mut self, start: AStarPoint, goal: AStarPoint) -> Vec<AStarPoint> {
+    pub fn solve_path(&mut self, start: AStarPoint, goal: AStarPoint) -> Option<Vec<AStarPoint>> {
         let start_point = match self.get_closest_point(start) {
             Some(x) => x,
             None => {
-                return Vec::new();
+                return None;
             }
         };
 
         let goal_point = match self.get_closest_point(goal) {
             Some(x) => x,
             None => {
-                return Vec::new();
+                return None;
             }
         };
 
-        let mut open_set: Vec<AStarPathNode> = Vec::new();
-        let closed_set: Vec<AStarPathNode> = Vec::new();
+        let mut open_set: Vec<usize> = vec![start_point.0];
+        let mut processed: Vec<usize> = Vec::new();
 
-        self.path_nodes.clear();
-        for (id, point) in self.points.iter().enumerate() {
-            let g_cost = point.calculate_distance(&start_point.1);
-            let h_cost = point.calculate_distance(&goal_point.1);
+        let mut g_costs: HashMap<usize, f32> = HashMap::new();
+        let mut h_costs: HashMap<usize, f32> = HashMap::new();
+        let mut path_connections: HashMap<usize, usize> = HashMap::new();
 
-            let path_node = AStarPathNode { node_id: id, g_cost, h_cost, f_cost: g_cost+h_cost, came_from: None };
-
-            if id == start_point.0 {
-                open_set.push(path_node.clone());
-            }
-
-            self.path_nodes.push(path_node);
+        for (node_id, point) in self.points.iter().enumerate() {
+            g_costs.insert(node_id, point.calculate_distance(&start_point.1));
+            h_costs.insert(node_id, point.calculate_distance(&goal_point.1));
         }
 
         while !open_set.is_empty() {
+            let mut current_id = open_set[0];
+            let mut current_point = self.points[current_id];
 
-            break;
+            for point_id in &open_set {
+                let point = self.points[*point_id];
+
+                let point_g = point.calculate_distance(&start_point.1);
+                let point_h = point.calculate_distance(&goal_point.1);
+                let point_f = point_g + point_h;
+
+                g_costs.insert(*point_id, point_g);
+                h_costs.insert(*point_id, point_h);
+
+                let current_g = current_point.calculate_distance(&start_point.1);
+                let current_h = current_point.calculate_distance(&goal_point.1);
+                let current_f = current_g + current_h;
+
+                if point_f <= current_f && point_h < current_h {
+                    current_id = *point_id;
+                    current_point = self.points[current_id];
+                }
+            }
+
+            processed.push(current_id);
+            open_set.remove(0);
+
+            let mut connections = self.get_connections(current_id);
+            connections.retain(|id| if processed.contains(id) { false } else { true });
+
+            for conn_id in connections {
+                let in_search = open_set.contains(&conn_id);
+
+                let cost_to_neighbour =
+                    g_costs[&conn_id] + current_point.calculate_distance(&self.points[conn_id]);
+
+                if !in_search || cost_to_neighbour < g_costs[&conn_id] {
+                    g_costs.insert(conn_id, cost_to_neighbour);
+                    path_connections.insert(conn_id, current_id);
+
+                    if !in_search {
+                        h_costs.insert(
+                            conn_id,
+                            self.points[conn_id].calculate_distance(&goal_point.1),
+                        );
+                        open_set.push(conn_id);
+                    }
+                }
+            }
         }
 
-        return vec![start_point.1];
+        let mut route: Vec<AStarPoint> = Vec::new();
+
+        let mut point_id = goal_point.0;
+
+        loop {
+            route.push(self.points[point_id]);
+
+            match path_connections.get(&point_id) {
+                Some(x) => point_id = *x,
+                None => {
+                    break;
+                }
+            };
+        }
+
+        if route[0] != goal_point.1 || route[route.len()-1] != start_point.1 {
+            return None;
+        } 
+
+        route.reverse();
+
+        return Some(route);
     }
 }
-
-
-//G = Distance from start
-//H = Distance from end
-//F = G + H
