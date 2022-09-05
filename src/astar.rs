@@ -49,6 +49,11 @@ impl AStarPathFinder {
         false
     }
 
+    pub fn remove_connections(&mut self, node_id: usize) -> bool {
+        self.connections.retain(|f| {if f.node_a_id == node_id || f.node_b_id == node_id {false}else{true}});
+        true
+    }
+
     fn get_connections(&self, node_id: usize) -> Vec<usize> {
         let mut connections: Vec<usize> = Vec::new();
 

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rand::Rng;
 
 use crate::{astar::AStarPoint, PathFloor};
 
@@ -58,6 +59,27 @@ pub fn generate_world(
 
             if x < X && y + 1 < Y {
                 path_finder.add_connection(*node_id, grid[x][y + 1]);
+            }
+
+            let mut rng = rand::thread_rng();
+
+            let num: u8 = rng.gen_range(0..=3);
+            if num == 1 {
+                path_finder.remove_connections(*node_id);
+                commands
+                .spawn_bundle(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0 })),
+                    transform: Transform {
+                        translation: Vec3 {
+                            x: x as f32,
+                            y: 0.1,
+                            z: y as f32,
+                        },
+                        ..Default::default()
+                    },
+                    material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+                    ..default()
+                });
             }
         }
     }
