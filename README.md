@@ -4,7 +4,7 @@ You can find the A* implementation in the astar.rs file.
 
 # How to run it
 First you need to build it, building the game requires the rust toolchain which you can get from https://www.rust-lang.org/ <br />
-After you have installed the rust toolchain you can compile & run the application by running ```cargo run --release``` in the project folder. <br />
+After you have installed the rust toolchain, you can compile & run the application by running ```cargo run --release``` in the project folder. <br />
 
 # Game controls
 ESC - Locks/Unlocks your mouse cursor <br />
