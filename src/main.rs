@@ -15,6 +15,7 @@ pub struct PathStart;
 pub struct VisualisedPath;
 
 mod astar;
+mod world_generation;
 
 fn main() {
     App::new()
@@ -22,16 +23,19 @@ fn main() {
         .add_plugin(NoCameraPlayerPlugin)
         .add_plugins(bevy_mod_picking::DefaultPickingPlugins)
         .add_plugin(bevy_transform_gizmo::TransformGizmoPlugin::default())
+        .insert_resource(astar::AStarPathFinder::default())
         .add_startup_system(setup)
-        .add_system(add_navmesh)
+        .add_startup_system(crate::world_generation::generate_world)
+        .add_system(show_path)
+        //.add_system(add_navmesh)
         .run();
 }
 
-fn add_navmesh(
+fn show_path(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut query: Query<&mut Transform, With<PathFloor>>,
+    mut path_finder: ResMut<crate::astar::AStarPathFinder>,
     mut goal_query: Query<&mut Transform, (With<PathGoal>, Without<PathFloor>)>,
     mut start_query: Query<
         &mut Transform,
@@ -51,16 +55,6 @@ fn add_navmesh(
         commands.entity(e).despawn();
     }
 
-    let mut path_finder = astar::AStarPathFinder::default();
-
-    for transform in &mut query {
-        path_finder.add_point(AStarPoint {
-            x: transform.translation.x,
-            y: transform.translation.y,
-            z: transform.translation.z,
-        });
-    }
-
     let mut goal_location: Option<Vec3> = None;
 
     for transform in &mut goal_query {
@@ -72,11 +66,6 @@ fn add_navmesh(
     for transform in &mut start_query {
         start_location = Some(transform.translation);
     }
-
-    path_finder.add_connection(0, 1);
-    path_finder.add_connection(1, 3);
-    path_finder.add_connection(0, 2);
-    path_finder.add_connection(0, 4);
 
     let path = match path_finder.solve_path(
         AStarPoint {
@@ -90,8 +79,11 @@ fn add_navmesh(
             z: goal_location.unwrap().z,
         },
     ) {
-        Some(v) => {v},
-        None => {println!("No path"); return;}
+        Some(v) => v,
+        None => {
+            //println!("No path");
+            return;
+        }
     };
 
     if path.len() >= 1 {
@@ -117,103 +109,6 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    // plane
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0 })),
-            transform: Transform {
-                translation: Vec3 {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                ..Default::default()
-            },
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-            ..default()
-        })
-        .insert(PathFloor);
-
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0 })),
-            transform: Transform {
-                translation: Vec3 {
-                    x: 1.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                ..Default::default()
-            },
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-            ..default()
-        })
-        .insert(PathFloor);
-
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0 })),
-            transform: Transform {
-                translation: Vec3 {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 1.0,
-                },
-                ..Default::default()
-            },
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-            ..default()
-        })
-        .insert(PathFloor);
-
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0 })),
-            transform: Transform {
-                translation: Vec3 {
-                    x: 2.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                ..Default::default()
-            },
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-            ..default()
-        })
-        .insert(PathFloor);
-
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0 })),
-            transform: Transform {
-                translation: Vec3 {
-                    x: -1.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                ..Default::default()
-            },
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-            ..default()
-        })
-        .insert(PathFloor);
-
-        commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane { size: 1.0 })),
-            transform: Transform {
-                translation: Vec3 {
-                    x: -5.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                ..Default::default()
-            },
-            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-            ..default()
-        })
-        .insert(PathFloor);
-
     // goal cube
     commands
         .spawn_bundle(PbrBundle {
@@ -236,17 +131,6 @@ fn setup(
         .insert(PathStart)
         .insert_bundle(bevy_mod_picking::PickableBundle::default())
         .insert(bevy_transform_gizmo::GizmoTransformable);
-
-    // light
-    commands.spawn_bundle(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    });
 
     commands
         .spawn_bundle(Camera3dBundle {

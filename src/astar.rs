@@ -178,9 +178,9 @@ impl AStarPathFinder {
             };
         }
 
-        if route[0] != goal_point.1 || route[route.len()-1] != start_point.1 {
+        if route[0] != goal_point.1 || route[route.len() - 1] != start_point.1 {
             return None;
-        } 
+        }
 
         route.reverse();
 
