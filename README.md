@@ -1,5 +1,5 @@
 # bevy_pathfinding
-The point of this project was to learn how to implement the A* search algorithm in Rust and how to visualise it with the Bevy game engine. <br />
+The point of this project was to learn how to implement the A* search algorithm in Rust and how to visualise it with the [Bevy game engine](https://bevyengine.org/). <br />
 You can find the A* implementation in the astar.rs file.
 
 # How to run it
